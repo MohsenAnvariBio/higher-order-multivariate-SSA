@@ -1,7 +1,7 @@
 clear; close all; clc;
 
 %% 0. Parameters & Data Loading (Prepared for Real ECG Data)
-W = 1250;         % Window length (Set to 400 as per the paper's ECG experiment)
+W = 400;         % Window length (Set to 400 as per the paper's ECG experiment)
 delta = 1;       % Step size 
 num_clusters = 3; % 3 groups: Maternal ECG, Fetal ECG, and Noise
 
@@ -11,13 +11,13 @@ num_clusters = 3; % 3 groups: Maternal ECG, Fetal ECG, and Noise
 raw_data = load("FOETAL_ECG.mat"); 
 raw_data = raw_data.FOETAL_ECG;
 t = raw_data(:, 1)';         % Column 1 is time
-data = raw_data(:, 2:9)';    % Columns 2-9 are the 8 channels. Transpose to (M x N)
+data = raw_data(:, 2:6)';    % Columns 2-6 are the 5 channels. Transpose to (M x N)
 % =========================================================================
 
 % --- Temporary Mock Real Data (Remove when you load your real data) ---
 N = 2500;  
-t = 1:N;
-M = 8;     % 8 Channels
+% t = 1:N;
+M = 5;     % 5 Channels
 % frequencies = linspace(1, 10, M)'; 
 % data = sin(frequencies * t) + 0.2 * randn(M, N); % Mock signal
 % ----------------------------------------------------------------------
@@ -53,9 +53,10 @@ V_fft = zeros(n2, K, n3);
 half_n3 = ceil((n3 + 1) / 2);
 for i = 1:half_n3
     [U_i, S_i, V_i] = svd(X_fft(:,:,i), 'econ');
-    U_fft(:,:,i) = U_i;
-    S_fft(:,:,i) = S_i;
-    V_fft(:,:,i) = V_i;
+% CRITICAL: Explicitly slice the outputs to keep only K components
+    U_fft(:,:,i) = U_i(:, 1:K);
+    S_fft(:,:,i) = S_i(1:K, 1:K);
+    V_fft(:,:,i) = V_i(:, 1:K);
 end
 
 % Conjugate Symmetry for the second half
@@ -80,15 +81,21 @@ end
 
 % Implement the exact Gaussian similarity matrix from the paper
 dist_mat = squareform(pdist(Features')); % Distance between the K components
-sigma = 1; 
+
+% Instead of hardcoding sigma = 1, we use the median distance. 
+% This ensures the Gaussian kernel scales perfectly with your data's amplitude.
+sigma = median(dist_mat(dist_mat > 0)); 
+if isnan(sigma) || sigma == 0
+    sigma = 1; % Fallback just in case
+end
+
+% Compute the Similarity Matrix
 A = exp(-dist_mat.^2 / (2 * sigma^2));
 
 % Cluster components into 3 groups (Maternal, Fetal, Noise)
 idx = spectralcluster(A, num_clusters, 'Distance', 'precomputed', ...
     'LaplacianNormalization', 'symmetric');
 %% 4. Step 4: Reconstruction for ALL Clusters
-num_clusters = 3;
-
 % Pre-allocate a 3D matrix to hold [Cluster x Channel x Time]
 reconstructed_data_all = zeros(num_clusters, M, N);
 
