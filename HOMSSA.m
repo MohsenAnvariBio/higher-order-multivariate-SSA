@@ -1,26 +1,47 @@
 clear; close all; clc;
 
-%% 0. Parameters & Data Loading (Prepared for Real ECG Data)
-W = 400;         % Window length (Set to 400 as per the paper's ECG experiment)
-delta = 1;       % Step size 
-num_clusters = 3; % 3 groups: Maternal ECG, Fetal ECG, and Noise
+% %% 0. Parameters & Data Loading (Prepared for Real ECG Data)
+% W = 50;         % Window length (Set to 400 as per the paper's ECG experiment)
+% % Fs = 250;
+% % target_time_seconds = 1;
+% % W = round(target_time_seconds * Fs);
+% 
+% delta = 1;       % Step size 
+% num_clusters = 3; % 3 groups: Maternal ECG, Fetal ECG, and Noise
+% 
+% % =========================================================================
+% % REPLACE THIS BLOCK WITH YOUR REAL DATA LOADING
+% % Assuming you have a CSV or MAT file named 'real_ecg.csv' of size 2500 x 9
+% raw_data = load("FOETAL_ECG.mat"); 
+% raw_data = raw_data.FOETAL_ECG;
+% t = raw_data(:, 1)';         % Column 1 is time
+% data = raw_data(:, 2:6)';    % Columns 2-6 are the 5 channels. Transpose to (M x N)
+% % =========================================================================
+% 
+% % --- Temporary Mock Real Data (Remove when you load your real data) ---
+% N = 2500;  
+% % t = 1:N;
+% M = 5;     % 5 Channels
+% % frequencies = linspace(1, 10, M)'; 
+% % data = sin(frequencies * t) + 0.2 * randn(M, N); % Mock signal
+% % ----------------------------------------------------------------------
+%% 0. Parameters & Data Loading
+W = 400;         
+delta = 1;       
+num_clusters = 3; 
 
-% =========================================================================
-% REPLACE THIS BLOCK WITH YOUR REAL DATA LOADING
-% Assuming you have a CSV or MAT file named 'real_ecg.csv' of size 2500 x 9
 raw_data = load("FOETAL_ECG.mat"); 
 raw_data = raw_data.FOETAL_ECG;
-t = raw_data(:, 1)';         % Column 1 is time
-data = raw_data(:, 2:6)';    % Columns 2-6 are the 5 channels. Transpose to (M x N)
-% =========================================================================
 
-% --- Temporary Mock Real Data (Remove when you load your real data) ---
-N = 2500;  
-% t = 1:N;
-M = 5;     % 5 Channels
-% frequencies = linspace(1, 10, M)'; 
-% data = sin(frequencies * t) + 0.2 * randn(M, N); % Mock signal
-% ----------------------------------------------------------------------
+N = 800; 
+t = raw_data(1:N, 1)';         
+data = raw_data(1:N, 2:6)';    
+M = 5; 
+
+% CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
+% This preserves the physical spatial mixing matrix of the electrodes.
+data = data ./ max(abs(data(:)));
+
 
 %% 1. Step 1: Construct Trajectory Tensor
 % Dimensions: [WindowLength x NumColumns x NumChannels]
@@ -38,10 +59,10 @@ end
 %% 2. Step 2: Tensor SVD (Algorithm 1 - Fourier Domain Decomposition)
 [n1, n2, n3] = size(X);
 
-
 % K = min(n1, n2); % 'Economy' rank limit
-K = tubalrank(X); 
-fprintf('Estimated Tubal Rank (K): %d\n', K);
+K2 = tubalrank(X); 
+
+K = 92; 
 
 X_fft = fft(X, [], 3); 
 
@@ -70,31 +91,40 @@ end
 U = ifft(U_fft, [], 3);
 S = ifft(S_fft, [], 3);
 V = ifft(V_fft, [], 3);
+[U2,S2,V2] = tsvd(X,'full');
 
 %% 3. Step 3: Grouping via Spectral Clustering
-% We must extract the "tubes" from the S tensor in the TIME domain (real part)
 S_time = real(S);
 Features = zeros(n3, K); 
 for k = 1:K
     Features(:, k) = squeeze(S_time(k,k,:));
 end
 
-% Implement the exact Gaussian similarity matrix from the paper
-dist_mat = squareform(pdist(Features')); % Distance between the K components
 
-% Instead of hardcoding sigma = 1, we use the median distance. 
-% This ensures the Gaussian kernel scales perfectly with your data's amplitude.
-sigma = median(dist_mat(dist_mat > 0)); 
-if isnan(sigma) || sigma == 0
-    sigma = 1; % Fallback just in case
-end
+% dist_temp = pdist(Features');
+% dist = squareform(dist_temp);
+% S = exp(-dist.^2);
+% issymmetric(S);
+% rng('default') 
+% idx = spectralcluster(S,num_clusters,'Distance','precomputed','LaplacianNormalization','symmetric');
 
-% Compute the Similarity Matrix
-A = exp(-dist_mat.^2 / (2 * sigma^2));
 
-% Cluster components into 3 groups (Maternal, Fetal, Noise)
-idx = spectralcluster(A, num_clusters, 'Distance', 'precomputed', ...
-    'LaplacianNormalization', 'symmetric');
+% Features = Features(2:5,:);
+
+Features = Features ./ max(abs(Features(:)));
+
+idxS = spectralcluster((Features([3,5],:))', num_clusters);
+
+idxK = kmeans(Features', num_clusters, 'Distance', 'sqeuclidean', 'Replicates', 10);
+
+% 1. Calculate pairwise distances (returns a vector, not a square matrix)
+dist_vec = pdist(Features'); 
+% 2. Build the Hierarchical Tree using Ward's minimum variance method
+Z = linkage(dist_vec, 'ward');
+% 3. Cut the tree into exactly 3 clusters
+idxC = cluster(Z, 'maxclust', num_clusters);
+
+idx = idxS;
 %% 4. Step 4: Reconstruction for ALL Clusters
 % Pre-allocate a 3D matrix to hold [Cluster x Channel x Time]
 reconstructed_data_all = zeros(num_clusters, M, N);
@@ -125,8 +155,8 @@ for c = 1:num_clusters
 end
 
 %% 5. Visualization: 8 Figures (One per Channel)
-% Display the first 1000 samples for better visibility of waveforms
-view_range = 1:min(1000, N); 
+% Display the first 800 samples for better visibility of waveforms
+view_range = 1:min(800, N); 
 colors = ['r', 'b', 'm']; % Colors to distinguish the 3 clusters
 
 for m = 1:M
@@ -138,6 +168,7 @@ for m = 1:M
     plot(t(view_range), data(m, view_range), 'k', 'LineWidth', 1); 
     title(['Channel ', num2str(m), ' - Original Mixture']);
     ylabel('Amplitude');
+    ylim([-0.5, 1])
     grid on;
     set(gca, 'XTickLabel', []); % Hide X-ticks for top plots
 
@@ -151,6 +182,7 @@ for m = 1:M
         plot(t(view_range), extracted_signal, 'Color', colors(c), 'LineWidth', 1.2);
         title(['Cluster ', num2str(c), ' (Extracted Component)']);
         ylabel('Amplitude');
+        ylim([-0.5, 1])
         grid on;
 
         % Only add the X-label to the very bottom plot
