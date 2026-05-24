@@ -38,6 +38,7 @@ t = raw_data(1:N, 1)';
 data = raw_data(1:N, 2:6)';    
 M = 5; 
 
+
 % CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
 % This preserves the physical spatial mixing matrix of the electrodes.
 data = data ./ max(abs(data(:)));
