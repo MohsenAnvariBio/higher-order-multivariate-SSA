@@ -1,21 +1,5 @@
 clear; close all; clc;
 
-% %% 0. Parameters & Data Loading (Prepared for Real ECG Data)
-% W = 50;         % Window length (Set to 400 as per the paper's ECG experiment)
-% % Fs = 250;
-% % target_time_seconds = 1;
-% % W = round(target_time_seconds * Fs);
-% 
-% delta = 1;       % Step size 
-% num_clusters = 3; % 3 groups: Maternal ECG, Fetal ECG, and Noise
-% 
-% % =========================================================================
-% % REPLACE THIS BLOCK WITH YOUR REAL DATA LOADING
-% % Assuming you have a CSV or MAT file named 'real_ecg.csv' of size 2500 x 9
-% raw_data = load("FOETAL_ECG.mat"); 
-% raw_data = raw_data.FOETAL_ECG;
-% t = raw_data(:, 1)';         % Column 1 is time
-% data = raw_data(:, 2:6)';    % Columns 2-6 are the 5 channels. Transpose to (M x N)
 % % =========================================================================
 % 
 % % --- Temporary Mock Real Data (Remove when you load your real data) ---
@@ -26,19 +10,30 @@ clear; close all; clc;
 % % data = sin(frequencies * t) + 0.2 * randn(M, N); % Mock signal
 % % ----------------------------------------------------------------------
 %% 0. Parameters & Data Loading
-W = 400;         
+
+%% ECG
+% W = 400;         
+% delta = 1;       
+% num_clusters = 3; 
+% N = 800; 
+% raw_data = load("FOETAL_ECG.mat"); 
+% raw_data = raw_data.FOETAL_ECG;
+% % raw_data(1:N, 3) = -raw_data(1:N, 3);
+% t = raw_data(1:N, 1)';         
+% data = raw_data(1:N, 2:6)';    
+% M = 5; 
+% % CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
+% % This preserves the physical spatial mixing matrix of the electrodes.
+% data = data ./ max(abs(data(:)));
+
+W = 1500;         
 delta = 1;       
-num_clusters = 3; 
-N = 800; 
-raw_data = load("FOETAL_ECG.mat"); 
-raw_data = raw_data.FOETAL_ECG;
-% raw_data(1:N, 3) = -raw_data(1:N, 3);
+num_clusters = 2; 
 
-t = raw_data(1:N, 1)';         
-data = raw_data(1:N, 2:6)';    
-M = 5; 
-
-
+load("Contaminated_Data.mat"); 
+data = sim10_con([1, 2, 3, 4, 11, 12], 1:3000);
+[M, N] = size(data); 
+t = 1: 1/200: N;         
 % CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
 % This preserves the physical spatial mixing matrix of the electrodes.
 data = data ./ max(abs(data(:)));
@@ -93,7 +88,7 @@ U = ifft(U_fft, [], 3);
 S = ifft(S_fft, [], 3);
 V = ifft(V_fft, [], 3);
 
-[U_tsvd,S_tsvd,V_tsvd] = tsvd(X,'full');
+% [U_tsvd,S_tsvd,V_tsvd] = tsvd(X,'full');
 
 %% 3. Step 3: Grouping via Spectral Clustering
 S_time = real(S);
@@ -123,7 +118,7 @@ Z = linkage(dist_vec, 'ward');
 % 3. Cut the tree into exactly 3 clusters
 idxC = cluster(Z, 'maxclust', num_clusters);
 
-idx = idxS;
+idx = idxK;
 %% 4. Step 4: Reconstruction for ALL Clusters
 % Pre-allocate a 3D matrix to hold [Cluster x Channel x Time]
 reconstructed_data_all = zeros(num_clusters, M, N);
@@ -155,7 +150,7 @@ end
 
 %% 5. Visualization: 8 Figures (One per Channel)
 % Display the first 800 samples for better visibility of waveforms
-view_range = 1:min(800, N); 
+view_range = 1:min(4000, N); 
 colors = ['r', 'b', 'm']; % Colors to distinguish the 3 clusters
 
 for m = 1:M
