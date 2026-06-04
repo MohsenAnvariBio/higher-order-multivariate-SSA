@@ -1,7 +1,8 @@
 clear; close all; clc;
 
-% % =========================================================================
-% 
+
+%% 0. Parameters & Data Loading
+% sin
 % % --- Temporary Mock Real Data (Remove when you load your real data) ---
 % N = 2500;  
 % % t = 1:N;
@@ -9,9 +10,8 @@ clear; close all; clc;
 % % frequencies = linspace(1, 10, M)'; 
 % % data = sin(frequencies * t) + 0.2 * randn(M, N); % Mock signal
 % % ----------------------------------------------------------------------
-%% 0. Parameters & Data Loading
 
-%% ECG
+% ECG
 % W = 400;         
 % delta = 1;       
 % num_clusters = 3; 
@@ -29,15 +29,14 @@ clear; close all; clc;
 W = 1500;         
 delta = 1;       
 num_clusters = 2; 
-
+fs = 200; 
 load("Contaminated_Data.mat"); 
-data = sim10_con([1, 2, 3, 4, 11, 12], 1:3000);
+data = sim10_con([1, 2, 3, 4, 11, 12], 1:3000); %EEG channels (Fp1, Fp2, F3, F4, F7, F8)
 [M, N] = size(data); 
-t = 1: 1/200: N;         
+t = 1: 1/fs: N;         
 % CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
 % This preserves the physical spatial mixing matrix of the electrodes.
 data = data ./ max(abs(data(:)));
-
 
 %% 1. Step 1: Construct Trajectory Tensor
 % Dimensions: [WindowLength x NumColumns x NumChannels]
@@ -56,10 +55,8 @@ end
 [n1, n2, n3] = size(X);
 
 % K = min(n1, n2); % 'Economy' rank limit
-K2 = tubalrank(X); 
-
-K = 92; 
-
+K = tubalrank(X); 
+% K = 92; 
 X_fft = fft(X, [], 3); 
 
 % Pre-allocate based on the economy size K
@@ -97,7 +94,6 @@ for k = 1:K
     Features(:, k) = squeeze(S_time(k,k,:));
 end
 
-
 dist_temp = pdist(Features');
 dist = squareform(dist_temp);
 S = exp(-dist.^2);
@@ -107,7 +103,7 @@ idxS1 = spectralcluster(S,num_clusters,'Distance','precomputed','LaplacianNormal
 
 % Features = Features ./ max(abs(Features(:)));
 
-idxS = spectralcluster((Features([3,5],:))', num_clusters);
+idxS = spectralcluster(Features, num_clusters);
 
 idxK = kmeans(Features', num_clusters, 'Distance', 'sqeuclidean', 'Replicates', 10);
 
@@ -155,7 +151,9 @@ colors = ['r', 'b', 'm']; % Colors to distinguish the 3 clusters
 
 for m = 1:M
     % Create a new figure for each channel
-    figure('Name', ['HO-MSSA: Channel ', num2str(m)], 'Color', 'w');
+    figure('Name', ['HO-MSSA: Channel ', num2str(m)], ...
+             'Color', 'w');
+    % movegui(fig, 'center');
 
     % --- Subplot 1: Original Mixture ---
     subplot(num_clusters + 1, 1, 1);
@@ -190,7 +188,7 @@ for m = 1:M
 
     % Adjust the window size so the subplots aren't cramped
     % The position shifts slightly for each m so the windows cascade cleanly
-    set(gcf, 'Position', [50 + m*20, 50 + m*20, 700, 800]);
+    set(gcf, 'Position', [50 + m*20, 50 + m*20, 600, 300]);
 end
 
 %% Function Definition: Block Diagonal Averaging
