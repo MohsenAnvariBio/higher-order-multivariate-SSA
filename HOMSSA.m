@@ -29,11 +29,11 @@ clear; close all; clc;
 W = 400;         
 delta = 1;       
 num_clusters = 3; 
-
+N = 800; 
 raw_data = load("FOETAL_ECG.mat"); 
 raw_data = raw_data.FOETAL_ECG;
+% raw_data(1:N, 3) = -raw_data(1:N, 3);
 
-N = 800; 
 t = raw_data(1:N, 1)';         
 data = raw_data(1:N, 2:6)';    
 M = 5; 
@@ -102,17 +102,17 @@ for k = 1:K
 end
 
 
-% dist_temp = pdist(Features');
-% dist = squareform(dist_temp);
-% S = exp(-dist.^2);
-% issymmetric(S);
-% rng('default') 
-% idx = spectralcluster(S,num_clusters,'Distance','precomputed','LaplacianNormalization','symmetric');
+dist_temp = pdist(Features');
+dist = squareform(dist_temp);
+S = exp(-dist.^2);
+issymmetric(S);
+rng('default') 
+idxS1 = spectralcluster(S,num_clusters,'Distance','precomputed','LaplacianNormalization','symmetric');
 
 
 % Features = Features(2:5,:);
 
-Features = Features ./ max(abs(Features(:)));
+% Features = Features ./ max(abs(Features(:)));
 
 idxS = spectralcluster((Features([3,5],:))', num_clusters);
 
@@ -169,7 +169,7 @@ for m = 1:M
     plot(t(view_range), data(m, view_range), 'k', 'LineWidth', 1); 
     title(['Channel ', num2str(m), ' - Original Mixture']);
     ylabel('Amplitude');
-    ylim([-0.5, 1])
+    % ylim([-1, 1])
     grid on;
     set(gca, 'XTickLabel', []); % Hide X-ticks for top plots
 
@@ -181,9 +181,9 @@ for m = 1:M
         extracted_signal = squeeze(reconstructed_data_all(c, m, view_range));
 
         plot(t(view_range), extracted_signal, 'Color', colors(c), 'LineWidth', 1.2);
-        title(['Cluster ', num2str(c), ' (Extracted Component)']);
+        title(['Cluster ', num2str(c)]);
         ylabel('Amplitude');
-        ylim([-0.5, 1])
+        ylim([-1, 1])
         grid on;
 
         % Only add the X-label to the very bottom plot
