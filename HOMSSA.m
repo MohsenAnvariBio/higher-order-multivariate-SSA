@@ -31,9 +31,9 @@ delta = 1;
 num_clusters = 2; 
 fs = 200; 
 load("Contaminated_Data.mat"); 
-data = sim10_con([1, 2, 3, 4, 11, 12], 1:3000); %EEG channels (Fp1, Fp2, F3, F4, F7, F8)
+data = sim1_con([1, 2, 3, 4, 11, 12], 1:3000); %EEG channels (Fp1, Fp2, F3, F4, F7, F8)
 [M, N] = size(data); 
-t = 1: 1/fs: N;         
+t = 1: 1/fs: N; 
 % CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
 % This preserves the physical spatial mixing matrix of the electrodes.
 data = data ./ max(abs(data(:)));
@@ -53,10 +53,9 @@ end
 
 %% 2. Step 2: Tensor SVD (Algorithm 1 - Fourier Domain Decomposition)
 [n1, n2, n3] = size(X);
-
 % K = min(n1, n2); % 'Economy' rank limit
 K = tubalrank(X); 
-% K = 92; 
+% K = 540; 
 X_fft = fft(X, [], 3); 
 
 % Pre-allocate based on the economy size K
