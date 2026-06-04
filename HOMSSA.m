@@ -92,7 +92,8 @@ end
 U = ifft(U_fft, [], 3);
 S = ifft(S_fft, [], 3);
 V = ifft(V_fft, [], 3);
-[U2,S2,V2] = tsvd(X,'full');
+
+[U_tsvd,S_tsvd,V_tsvd] = tsvd(X,'full');
 
 %% 3. Step 3: Grouping via Spectral Clustering
 S_time = real(S);
@@ -108,9 +109,6 @@ S = exp(-dist.^2);
 issymmetric(S);
 rng('default') 
 idxS1 = spectralcluster(S,num_clusters,'Distance','precomputed','LaplacianNormalization','symmetric');
-
-
-% Features = Features(2:5,:);
 
 % Features = Features ./ max(abs(Features(:)));
 
@@ -169,6 +167,7 @@ for m = 1:M
     plot(t(view_range), data(m, view_range), 'k', 'LineWidth', 1); 
     title(['Channel ', num2str(m), ' - Original Mixture']);
     ylabel('Amplitude');
+    y_limits = ylim;
     % ylim([-1, 1])
     grid on;
     set(gca, 'XTickLabel', []); % Hide X-ticks for top plots
@@ -183,7 +182,7 @@ for m = 1:M
         plot(t(view_range), extracted_signal, 'Color', colors(c), 'LineWidth', 1.2);
         title(['Cluster ', num2str(c)]);
         ylabel('Amplitude');
-        ylim([-1, 1])
+        ylim(y_limits);
         grid on;
 
         % Only add the X-label to the very bottom plot
