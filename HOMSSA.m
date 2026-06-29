@@ -1,6 +1,8 @@
 clear; close all; clc;
 
 %% 0. User Input & Data Loading
+
+%% EEG DATA
 % Prompt the user to select which dataset to run
 patient_id = input('Enter the dataset number to process (1 to 27): ');
 
@@ -34,6 +36,22 @@ t = 1:1/fs:N;
 
 % CRITICAL FIX 1: Normalize globally, NOT channel-by-channel.
 data = raw_data ;%./ max(abs(raw_data(:)));
+
+%% ECG DATA
+% W = 400;         % Window length (Set to 400 as per the paper's ECG experiment)
+% delta = 1;       % Step size 
+% num_clusters = 3; % 3 groups: Maternal ECG, Fetal ECG, and Noise
+% 
+% patient_id = 1;
+% variance_threshold = 0.999; % 99.9% variance for dynamic K
+% 
+% raw_data = load('FOETAL_ECG.mat');
+% % [M, N] = size(raw_data.FOETAL_ECG);
+% M = 5;
+% N = 800;
+% t = raw_data.FOETAL_ECG(1:N, 1)';         % Column 1 is time
+% data = raw_data.FOETAL_ECG(1:N, 2:6)';    % Columns 2-6 are the 5 channels. Transpose to (M x N)
+
 
 %% 1. Step 1: Construct Trajectory Tensor
 fprintf('Step 1: Constructing Trajectory Tensor...\n');
