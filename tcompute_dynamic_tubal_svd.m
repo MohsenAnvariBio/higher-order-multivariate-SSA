@@ -1,4 +1,4 @@
-function [U_fft, S_fft, V_fft, S_time, K, s_k_norm, VR_k] = compute_dynamic_tubal_svd(X, threshold)
+function [U_fft, S_fft, V_fft, S_time, K, s_k_norm, VR_k] = tcompute_dynamic_tubal_svd(X, threshold)
 [n1, n2, n3] = size(X);
 I_dim = min(n1, n2); 
 half_n3 = ceil((n3 + 1) / 2);
