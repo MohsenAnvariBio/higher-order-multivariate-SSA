@@ -8,13 +8,13 @@ If you use this code or data in your research, please cite the following paper:
 
 ---
 
-## 🛠️ Installation and Setup
+## Installation and Setup
 
 To run this code, simply download all the files in this repository and place them together in a single folder on your machine or MATLAB Online environment. Ensure that this folder is set as your Current Folder in MATLAB.
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 The files in this repository are divided into three main categories: Data, Main Scripts, and Helper Functions.
 
