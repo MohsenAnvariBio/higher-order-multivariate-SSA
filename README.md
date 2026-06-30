@@ -36,10 +36,21 @@ These are the primary executable scripts for running the analyses:
         5. **Visualization:** Automatically plots the original mixture alongside the separated clusters for each channel.
 
 * **`calculate_mae.m`**
-    * *Description:* [Add your details here about what this script does, inputs/outputs, etc.]
+    * *Description:* Evaluates the performance of the HO-MSSA algorithm in removing EOG artifacts from EEG signals. It calculates the Mean Absolute Error (MAE) metric in the frequency domain across five standard bands (delta, theta, alpha, beta, and low-gamma). This script directly reproduces the HO-MSSA performance results shown in **Table 2** of the reference paper.
+    * *Data Requirements:* Requires the `Contaminated_Data.mat` dataset to be in the same folder.
+    * *Algorithm Flow:*
+        1. **Batch Processing Pipeline:** Iterates through all 27 patients, applying the full HO-MSSA decomposition and clustering process to separate clean EEG signals from artifacts.
+        2. **Performance Evaluation:** Computes the frequency-domain MAE between the contaminated mixture and the reconstructed clean signal for all 6 active channels.
+        3. **Statistical Aggregation:** Aggregates the MAE scores across all valid patients and channels to calculate the global mean and standard deviation for each frequency band.
+        4. **Console Output:** Prints a formatted summary table directly to the Command Window, mirroring the structure of Table 2 in the paper.
 * **`calculate_K.m`**
-    * *Description:* [Add your details here about what this script does, inputs/outputs, etc.]
-
+    * *Description:* This script processes the entire EEG dataset in a loop to evaluate the optimal tubal rank (K) across all 27 participants. It uses a 99.98% variance threshold to capture the dominant components. This script specifically reproduces the statistical findings reported in **Table 1** and the aggregated variance ratio visualizations in **Figure 13** of the reference paper.
+    * *Data Requirements:* Requires the `Contaminated_Data.mat` dataset to be in the same folder.
+    * *Algorithm Flow:*
+        1. **Batch Processing:** Iterates through all 27 patient datasets (`sim1_con` to `sim27_con`), applying global normalization to each.
+        2. **Tensor Construction & Metrics:** Embeds each patient's EEG data into a trajectory tensor and computes the tubal norms and Variance Ratio (VR).
+        3. **Statistical Summary:** Calculates and prints the mean and standard deviation of the tubal rank (K) across the entire dataset.
+        4. **Aggregated Visualization:** Generates a combined plot showing the averaged tubal norms and variance ratio curves across all valid patients.
 
 ### 3. Helper Functions
 These are underlying functions called by the main scripts to perform tensor operations, clustering, and signal reconstruction:
