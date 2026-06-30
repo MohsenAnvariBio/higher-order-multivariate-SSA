@@ -8,7 +8,6 @@ num_patients = 27;
 variance_threshold = 0.9998; % 99.9% for calculating K
 channels_to_use = [1, 2, 3, 4, 11, 12]; % Fp1, Fp2, F3, F4, F7, F8
 time_samples = 1:3000;
-
 % --- DATA LOADING ---
 % Load the entire file into a structure variable
 fprintf('Loading Contaminated_Data.mat into memory...\n');
