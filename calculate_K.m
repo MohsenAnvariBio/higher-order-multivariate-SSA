@@ -64,6 +64,40 @@ fprintf('\n----------------------------------------\n');
 fprintf('Tubal Rank K over %d valid patients: %.2f ± %.2f\n', sum(valid_idx), mean_K, std_K);
 fprintf('----------------------------------------\n');
 
-%% 3. Plot Figure 13 (Averaged over 27 patients)
-% Only plot using the rows where data was successfully processed
+%% --- Comparison Visualizations ---
 tplot_figure_13_single(all_s_k_norms(valid_idx, :), all_VR_k(valid_idx, :), I_dim);
+ref_ranks = [
+    540, 551, 529, 527, 548, 536, 523, 527, 527, ... % Patients 1-9
+    541, 538, 529, 544, 540, 523, 524, 529, 531, ... % Patients 10-18
+    528, 529, 546, 547, 541, 526, 532, 525, 534      % Patients 19-27
+];
+ref_ranks = ref_ranks(:);
+all_K = all_K(:);
+valid_idx = all_K > 0;
+valid_all_K = all_K(valid_idx);
+valid_ref_ranks = ref_ranks(valid_idx);
+figure('Name', 'Distribution Curve Comparison', 'Position', [100, 80, 800, 400]);
+paper_mean = mean(valid_ref_ranks);
+paper_std = std(valid_ref_ranks);
+my_mean = mean(valid_all_K);
+my_std = std(valid_all_K);
+x_min = min(paper_mean, my_mean) - 40;
+x_max = max(paper_mean, my_mean) + 40;
+x = linspace(x_min, x_max, 1000);
+paper_curve = normpdf(x, paper_mean, paper_std);
+my_curve = normpdf(x, my_mean, my_std);
+
+% Plot curves
+plot(x, paper_curve, 'Color', [0.2 0.5 0.7], 'LineWidth', 2.5); hold on;
+plot(x, my_curve, 'Color', [0.3 0.7 0.4], 'LineWidth', 2.5);
+area(x, paper_curve, 'FaceColor', [0.2 0.5 0.7], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+area(x, my_curve, 'FaceColor', [0.3 0.7 0.4], 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+
+title(['Tubal Rank (K) Distribution, Threshold: ', num2str(variance_threshold)], 'FontSize', 16);
+xlabel('Estimated Tubal Rank (K)', 'FontSize', 16);
+ylabel('Probability Density', 'FontSize', 16);
+legend('Paper Benchmark (Mean=533, Std=8.2)', ...
+    sprintf('Implementation (Mean=%.1f, Std=%.1f)', my_mean, my_std), ...
+    'Location', 'best', 'FontSize', 16);
+grid on;
+hold off;
