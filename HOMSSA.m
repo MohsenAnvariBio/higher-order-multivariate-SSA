@@ -64,7 +64,7 @@ fprintf('Step 2: Performing Tubal SVD...\n');
 fprintf('Calculated Tubal Rank K for patient %d (capturing %.2f%% variance): %d\n', patient_id, variance_threshold * 100, K);
 
 % Plot Figure 13 for this specific dataset
-tplot_figure_13_single(s_k_norm, VR_k, patient_id);
+tplot_vr(s_k_norm, VR_k, patient_id);
 
 %% 3. Step 3: Grouping via Spectral Clustering / K-Means
 fprintf('Step 3: Clustering Components...\n');
@@ -85,7 +85,7 @@ for m = 1:M
     % --- Subplot 1: Original Mixture ---
     subplot(num_clusters + 1, 1, 1);
     plot(t(view_range), data(m, view_range), 'k', 'LineWidth', 1); 
-    title(['Channel ', num2str(m), ' - Original EEG (with blink artifact)']);
+    title(['P', num2str(patient_id), ', Ch', num2str(m),' - Original EEG (with artifact)'], 'FontSize', 14);
     ylabel('Amplitude');
     y_limits = ylim;
     grid on;
@@ -97,7 +97,7 @@ for m = 1:M
         extracted_signal = squeeze(reconstructed_data_all(c, m, view_range));
         plot(t(view_range), extracted_signal, 'Color', colors(mod(c-1, length(colors))+1), 'LineWidth', 1.2);
         if (c==1&num_clusters==2), extra = ': Reconstructed EEG'; else, extra = ': Extracted Blink Artifact';  end 
-        title(['Cluster ', num2str(c), extra]);
+        title(['Cluster ', num2str(c), extra], 'FontSize', 14);
         ylabel('Amplitude');
         ylim(y_limits);
         grid on;
@@ -110,7 +110,9 @@ for m = 1:M
     end
     set(gcf, 'Position', [50 + m*20, 50 + m*20, 600, 300]);
     % save images
-    % filename = sprintf('Patient_%d_Channel_%d.png', patient_id, m);
-    % exportgraphics(gcf, filename, 'Resolution', 300);
+    saveFolder = '/MATLAB Drive/RP/images';
+    baseFilename = sprintf('Patient_%d_Channel_%d.png', patient_id, m);
+    fullPath = fullfile(saveFolder, baseFilename);
+    exportgraphics(gcf, fullPath, 'Resolution', 300);
 end
 fprintf('Processing Complete!\n');

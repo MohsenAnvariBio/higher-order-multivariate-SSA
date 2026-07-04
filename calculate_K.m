@@ -65,7 +65,7 @@ fprintf('Tubal Rank K over %d valid patients: %.2f ± %.2f\n', sum(valid_idx), m
 fprintf('----------------------------------------\n');
 
 %% --- Comparison Visualizations ---
-tplot_figure_13_single(all_s_k_norms(valid_idx, :), all_VR_k(valid_idx, :), I_dim);
+tplot_vr(all_s_k_norms(valid_idx, :), all_VR_k(valid_idx, :), I_dim);
 ref_ranks = [
     540, 551, 529, 527, 548, 536, 523, 527, 527, ... % Patients 1-9
     541, 538, 529, 544, 540, 523, 524, 529, 531, ... % Patients 10-18
