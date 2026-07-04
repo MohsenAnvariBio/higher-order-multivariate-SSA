@@ -1,4 +1,4 @@
-function idx = tcluster_components(S_time, K, num_clusters)
+function [idx, idxS, idxC] = tcluster_components(S_time, K, num_clusters)
 [~, ~, n3] = size(S_time);
 Features = zeros(n3, K); 
 for k = 1:K
