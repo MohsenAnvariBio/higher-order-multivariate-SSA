@@ -17,7 +17,7 @@ W = 1500;
 delta = 1;       
 num_clusters = 2; 
 fs = 200; 
-variance_threshold = 0.999; % 99.9% variance for dynamic K
+variance_threshold = 0.9998; % 99.9% variance for dynamic K
 channels_to_use = [1, 2, 3, 4, 11, 12]; % Fp1, Fp2, F3, F4, F7, F8
 time_samples = 1:3000;
 
@@ -68,7 +68,7 @@ tplot_figure_13_single(s_k_norm, VR_k, patient_id);
 
 %% 3. Step 3: Grouping via Spectral Clustering / K-Means
 fprintf('Step 3: Clustering Components...\n');
-idx = tcluster_components(S_time, K, num_clusters);
+[idx, idxS, idxC] = tcluster_components(S_time, K, num_clusters);
 
 %% 4. Step 4: Reconstruction for ALL Clusters
 fprintf('Step 4: Reconstructing Signals...\n');
@@ -81,26 +81,27 @@ colors = ['r', 'b', 'm', 'g']; % Expandable if num_clusters > 3
 
 for m = 1:M
     figure('Name', ['HO-MSSA: Patient ', num2str(patient_id), ' - Channel ', num2str(m)], 'Color', 'w');
-    
+
     % --- Subplot 1: Original Mixture ---
     subplot(num_clusters + 1, 1, 1);
     plot(t(view_range), data(m, view_range), 'k', 'LineWidth', 1); 
-    title(['Channel ', num2str(m), ' - Original Mixture']);
+    title(['Channel ', num2str(m), ' - Original EEG (with blink artifact)']);
     ylabel('Amplitude');
     y_limits = ylim;
     grid on;
     set(gca, 'XTickLabel', []); 
-    
+
     % --- Subplots for Extracted Clusters ---
     for c = 1:num_clusters
         subplot(num_clusters + 1, 1, c + 1);
         extracted_signal = squeeze(reconstructed_data_all(c, m, view_range));
         plot(t(view_range), extracted_signal, 'Color', colors(mod(c-1, length(colors))+1), 'LineWidth', 1.2);
-        title(['Cluster ', num2str(c)]);
+        if (c==1&num_clusters==2), extra = ': Reconstructed EEG'; else, extra = ': Extracted Blink Artifact';  end 
+        title(['Cluster ', num2str(c), extra]);
         ylabel('Amplitude');
         ylim(y_limits);
         grid on;
-        
+
         if c == num_clusters
             xlabel('Time (Samples)');
         else
@@ -108,5 +109,8 @@ for m = 1:M
         end
     end
     set(gcf, 'Position', [50 + m*20, 50 + m*20, 600, 300]);
+    % save images
+    % filename = sprintf('Patient_%d_Channel_%d.png', patient_id, m);
+    % exportgraphics(gcf, filename, 'Resolution', 300);
 end
 fprintf('Processing Complete!\n');
