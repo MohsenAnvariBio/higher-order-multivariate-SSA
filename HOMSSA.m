@@ -60,7 +60,7 @@ X = tbuild_trajectory_tensor(data, W, delta);
 %% 2. Step 2: Tensor SVD & Figure 13
 fprintf('Step 2: Performing Tubal SVD...\n');
 [U_fft, S_fft, V_fft, S_time, K, s_k_norm, VR_k] = tcompute_dynamic_tubal_svd(X, variance_threshold);
-
+% K = 92;
 fprintf('Calculated Tubal Rank K for patient %d (capturing %.2f%% variance): %d\n', patient_id, variance_threshold * 100, K);
 
 % Plot Figure 13 for this specific dataset
@@ -68,22 +68,31 @@ tplot_vr(s_k_norm, VR_k, patient_id);
 
 %% 3. Step 3: Grouping via Spectral Clustering / K-Means
 fprintf('Step 3: Clustering Components...\n');
-[idx, idxS, idxC] = tcluster_components(S_time, K, num_clusters);
+[idx, idxS, idxC, Features] = tcluster_components(S_time, K, num_clusters);
 
 %% 4. Step 4: Reconstruction for ALL Clusters
 fprintf('Step 4: Reconstructing Signals...\n');
 reconstructed_data_all = treconstruct_signals(U_fft, S_fft, V_fft, idx, num_clusters, M, N, W, delta);
+%% Traditional Highpass Filter
+fc = 4; % Cutoff frequency (4 Hz, effectively removing EOG and Delta waves)
+[b, a] = butter(4, fc / (fs/2), 'low'); % 4th-order Butterworth highpass filter
+
+% Apply zero-phase filtering to avoid shifting the signal in time
+filtered_data = zeros(M, N);
+for m = 1:M
+    filtered_data(m, :) = filtfilt(b, a, data(m, :));
+end
 
 %% 5. Visualization: Signal Waveforms
 fprintf('Step 5: Generating Plots...\n');
 view_range = 1:min(4000, N); 
 colors = ['r', 'b', 'm', 'g']; % Expandable if num_clusters > 3
-
+num_subplots = num_clusters + 2;
 for m = 1:M
     figure('Name', ['HO-MSSA: Patient ', num2str(patient_id), ' - Channel ', num2str(m)], 'Color', 'w');
 
     % --- Subplot 1: Original Mixture ---
-    subplot(num_clusters + 1, 1, 1);
+    subplot(num_subplots, 1, 1);
     plot(t(view_range), data(m, view_range), 'k', 'LineWidth', 1); 
     title(['P', num2str(patient_id), ', Ch', num2str(m),' - Original EEG (with artifact)'], 'FontSize', 14);
     ylabel('Amplitude');
@@ -93,7 +102,7 @@ for m = 1:M
 
     % --- Subplots for Extracted Clusters ---
     for c = 1:num_clusters
-        subplot(num_clusters + 1, 1, c + 1);
+        subplot(num_subplots, 1, c + 1);
         extracted_signal = squeeze(reconstructed_data_all(c, m, view_range));
         plot(t(view_range), extracted_signal, 'Color', colors(mod(c-1, length(colors))+1), 'LineWidth', 1.2);
         if (c==1&num_clusters==2), extra = ': Reconstructed EEG'; else, extra = ': Extracted Blink Artifact';  end 
@@ -108,11 +117,23 @@ for m = 1:M
             set(gca, 'XTickLabel', []);
         end
     end
+
+    % --- Subplot 4: Traditional Highpass Filtered Data ---
+    subplot(num_subplots, 1, num_subplots);
+    plot(t(view_range), filtered_data(m, view_range), 'Color', [0.4 0.4 0.4], 'LineWidth', 1.2);
+    title('Naive Highpass Filter (fc = 4 Hz)', 'FontSize', 12);
+    ylabel('Amplitude');
+    ylim(y_limits);
+    grid on;
+    xlabel('Time (Seconds)');
+
+    % --- Save the figure as a PNG file
+    % saveFolder = '/MATLAB Drive/RP/images';
+    % baseFilename = sprintf('Patient_%d_Channel_%d.png', patient_id, m);
+    % fullPath = fullfile(saveFolder, baseFilename);
+    % exportgraphics(gcf, fullPath, 'Resolution', 300);
+    % 
     set(gcf, 'Position', [50 + m*20, 50 + m*20, 600, 300]);
-    % save images
-    saveFolder = '/MATLAB Drive/RP/images';
-    baseFilename = sprintf('Patient_%d_Channel_%d.png', patient_id, m);
-    fullPath = fullfile(saveFolder, baseFilename);
-    exportgraphics(gcf, fullPath, 'Resolution', 300);
+ 
 end
 fprintf('Processing Complete!\n');

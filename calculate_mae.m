@@ -50,7 +50,8 @@ for p = 1:num_patients
     
     % Core Pipeline
     X = tbuild_trajectory_tensor(data, W, delta);
-    [U_fft, S_fft, V_fft, S_time, K, ~, ~] = tcompute_dynamic_tubal_svd(X, variance_threshold);
+    % [U_fft, S_fft, V_fft, S_time, K, ~, ~] = tcompute_dynamic_tubal_svd(X, variance_threshold);
+    [U_fft, S_fft, V_fft, S_time, K, s_k_norm, VR_k] = tdecomposition(X, variance_threshold, 'tsvd');
     
     % Get all clustering methods
     [idx, idxS, idxC] = tcluster_components(S_time, K, num_clusters);
